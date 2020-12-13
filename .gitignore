@@ -1,0 +1,5 @@
+*.env
+testFile.txt
+test.py
+quotes.py
+__pycache__
