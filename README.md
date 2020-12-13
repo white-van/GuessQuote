@@ -6,6 +6,8 @@ It reads from a quotes.py file of quotes saved from UB3R-Bot, randomly chooses a
 ## How it works
 
 bot.py obtains the quotes list from `quotes.py`
+It then obtains a random quotes from the list, displays the text for users to see, and initializes the game.
+The game won't stop until the correct username has been guessed or `-giveup` has been triggered.
 
 
 ## Getting Started
