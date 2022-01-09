@@ -3,27 +3,114 @@ import os
 import discord
 import random
 import re
+from dotenv import load_dotenv
+load_dotenv()
 
-from quotes import *
+from quotes import name_alias, quotes
 
+#The Discord Auth token
 TOKEN = os.getenv('DISCORD_TOKEN')
 #QUOTES_PATH="quotes.txt"
 client = discord.Client()
 
+#Prefix
+prefix = '-'
 
-game=False
-ans=""
-response=""
-origQuote=""
-namelessQuote=""
-global name_alias
-name_alias = {"orange": ["nivy"], "iandur": ["lance", "lander"], "laptop monkey": ["kyo", "desktop monkey"], "emily w": ["emily", "goose"],
-"blossom": ["naaz"], "onion": ["onion", "ritvik", "aipiox"], "jc": ["jerry"], "absurdism": ["krish"], "redvilder": ["nick"],"doomgooey": ["sergey", "doom"], "jonjonnho": ["jonathan"], "みお" : ["mio"],
-"luciars": ["shiba", "lucas"], "garboguy": ["liam", "garbo" ,"mailman"], "dripbot": ["bolt"], "the-call-of-the-void": ["jessica", "obomo"], "voidlord": ["chonky","chonky birb", "StarLight "], "givemewater": ["water"], "kay911kay": ["broke&homeless", "broke", "daniel"], "salazareo": ["daniel", "salazar"], 
-"riddle": ["kana"], "theraghavsharma": ["raghav", "kyo's butler"], "winghawk": ["georges","shanker"], "lukasz345": ["lukasz"], "starlight": ["chonky","chonky birb", "voidlord"],
-"1!":["wan"], "iloveubb":["hans"], 
-"undefined_kimchi": ["kimchi", "kim"], "cluelessKimchi一IlirFan": ["kimchi", "kim"], "kimchi_bot": ["kimchi", "kim"], "Chonky Rebel BOT Kimchi": ["kimchi", "kim"], "cluelessKimchi-IlirFan": ["kimchi", "kim"]
+#Display helper functions
+def DisplayHelp():
+    embed=discord.Embed(title='Guess Quote Commands!', color=0x702eb2)
+    embed.add_field(name='{0}guessquote ({0}gq)'.format(prefix), value='Starts a quote guessing game!', inline=False)
+    embed.add_field(name='{}giveup'.format(prefix), value='Ends the current game', inline=False)
+    embed.add_field(name='{}leaderboard'.format(prefix), value='displays the current leaderboard', inline=False)
+    embed.add_field(name='{}quote'.format(prefix), value='Repeats current quote', inline=True)
+    return embed
+
+def DisplayGuessGame(ans = None, origQuote = None, namelessQuote = None):
+    embed=discord.Embed(title="Guess who said this quote!", color=0x702eb2)
+    embed.add_field(name="‎", value=namelessQuote, inline=True)
+    return embed
+
+def DisplayNoGame():
+    return discord.Embed(title="Oh no!", description="There currently isn't a game running, start one with {0}guessquote or {0}gq!".format(prefix), color=0x702eb2)
+
+def DisplayGiveup(ans = None, origQuote = None, namelessQuote = None):
+    embed=discord.Embed(title="So close!", description="You weren't able to guess the quote, that sucks!", color=0x702eb2)
+    embed.add_field(name="Original Quote", value=origQuote, inline=True)
+    return embed
+
+def DisplayCorrect(ans = None, origQuote = None, namelessQuote = None):
+    embed=discord.Embed(title="Correct!", description="Spot on, you got it right!", color=0x702eb2)
+    embed.add_field(name="Original Quote", value=origQuote, inline=True)
+    return embed
+
+def DisplayIncorrect():
+    embed=discord.Embed(title="Guess the Quote!", description="Incorrect, ya got the wrong person!", color=0x702eb2)
+    return embed
+
+# The different playable games
+gameStates = {
+    'guessGame': {
+        'ans': None,
+        'origQuote': None,
+        'namelessQuote': None,
+    }
 }
+
+def has_match(lstOne, lstTwo):
+    seen = {}
+    for element in lstOne:
+        seen[element] = 1
+    for element in lstTwo:
+        if seen.get(element,None) != None:
+            return True 
+    return False 
+
+#Game one
+
+def parseGameOne(message, ans, origQuote, namelessQuote):
+    global currentGame
+    name = None 
+    messageList = message.split(' ')
+    if len(messageList)  > 1:
+        name = ' '.join(messageList[1:]).lower()
+    #check if they try to initiate here
+    if message in ['gq','guessquote']:
+        #Trying to be sneaky
+        return discord.Embed(title='Oh no!', description='You tried to start a new game, when a current game is already in session! Use -quote to repeat the quote, or -giveup to quit the game!', color=0x702eb2)
+    elif message in ['quote']:
+        #Repeat Quote
+        return DisplayGuessGame(namelessQuote = namelessQuote)
+    elif message in ['giveup']:
+        #Gave up
+        currentGame = 0
+        resetGameOne()
+        return DisplayGiveup(origQuote = origQuote)
+    elif ans.lower() in message.lower() or (name_alias.get(name, None) != None and has_match(name_alias[name], name_alias[ans.lower()])):
+        #Winner!
+        currentGame = 0
+        resetGameOne()
+        return DisplayCorrect(origQuote = origQuote)
+    else:
+        #Wrong Guess
+        return DisplayIncorrect()
+
+
+def resetGameOne():
+    gameStates["guessGame"] = {
+        'ans': None,
+        'origQuote': None,
+        'namelessQuote': None,
+    }
+    
+#The current game playing, 0 if none
+currentGame = 0
+
+
+parseGameFunc = [None, ('guessGame',parseGameOne)]
+
+resetGameFunc = [None, resetGameOne]
+
+
 
 def randquote():
     quote = quotes[random.randint(0, len(quotes)-1)]
@@ -33,72 +120,48 @@ def randquote():
     output = [quoteText, quoteAuthor, OGQuote]
     return output
 
-def setState(gameState,answerState,originalQuote, quote):
-    global game
-    global ans
-    global origQuote
-    global namelessQuote
-
-    game=gameState
-    ans=answerState
-    origQuote=originalQuote
-    namelessQuote=quote
-
-def getState():
-    return [game, ans, origQuote,namelessQuote]
-
 @client.event
 async def on_ready():
-    game=False
-    ans=""
+    resetGameOne()
     # Everything under here, the bot executes for "commands"
     print(f'{client.user} has connected to Discord!')
 
-
 @client.event
 async def on_message(message):
+    global currentGame
+    global gameStates
     if message.author == client.user:
         return
 
     messageContent = (message.content).lower()
 
-    if len(messageContent) > 0 and messageContent[0] == "-":
-        response=""
+    if len(messageContent) > 0 and messageContent[0] == prefix:
+        messageContent = messageContent[1:]
+        response = None
             # List of Commands
 
-        if messageContent == '-help':
-            response="**Guess Quote Commands!**\n **-guessquote** -> starts a quote guessing game! (short form -**gq**)\n **-giveup** -> Stops the game and reveals the answer!\n **-[username]** -> guessing that username for the current quote\n **-quote** -> Repeats the current quote being guessed!"
+        if messageContent == 'help':
+            response = DisplayHelp()
         
             # Prevents starting a new game if a game is on progress
-        elif (messageContent == '-guessquote' or messageContent == '-gq') and getState()[0]: 
-            response="Guess the previous quote! use -giveup to giveup\n Current Quote:\n" + getState()[3]
+        elif currentGame != 0: 
+            key, curGameParser = parseGameFunc[currentGame]
+            response=curGameParser(messageContent,**gameStates[key])
+        else:
+            #Start the game
+            if (messageContent in ['guessquote','gq']):
+                quoteText, quoteAuthor, OGQuote = randquote()
+                currentGame = 1
+                gameStates['guessGame'] = {
+                    'ans': quoteAuthor,
+                    'origQuote': OGQuote,
+                    'namelessQuote': quoteText
+                }
+                response = DisplayGuessGame(**gameStates['guessGame'])
+            elif (messageContent in ['giveup', 'quote']):
+                response = DisplayNoGame()
 
-            # Starting the Game
-        elif (messageContent == '-guessquote' or messageContent == '-gq') and not getState()[0]:
-            quote = randquote()
-            response = quote[0]
-            setState(True,quote[1],quote[2],quote[0])
-            # re-prints the quote
-        elif(messageContent == '-quote') and getState()[0]:
-            response=getState()[3]
-            # Giving up
-        elif messageContent == '-giveup' and getState()[0]:
-            response = "Original quote:\n\n" + getState()[2]
-            setState(False,"","","")
-
-            # Giving up when no game is running
-        elif (messageContent == '-giveup' or messageContent == '-quote') and not getState()[0]:
-            reponse = "There is currently no game running!\nUse -guessquote to start a game!"
-
-            # Correct Guess
-        elif getState()[0] and ((getState()[1]).lower() in messageContent) or (getState()[1].lower() in name_alias) and messageContent[1:] in (name_alias[getState()[1].lower()]):
-            response = "**Correct!** \nOriginal quote:\n\n" + getState()[2]
-            setState(False,"","","")
-
-            # Wrong Guess
-        elif getState()[0]:
-            response = "Guess again or type -giveup to giveup." 
-        if response != "":
-            await message.channel.send(response)
+        if response != None:
+            await message.channel.send(embed = response)
 
 client.run(TOKEN)
