@@ -16,6 +16,23 @@ client = discord.Client()
 #Prefix
 prefix = '-'
 
+# The different playable games
+gameStates = {
+    'guessGame': {
+        'ans': None,
+        'origQuote': None,
+        'namelessQuote': None,
+    }
+}
+
+leaderboards = {
+    'guessGame': {
+        'userIdToPoints': {},
+        'leaderboard': []
+    }
+}
+
+
 #Display helper functions
 def DisplayHelp():
     embed=discord.Embed(title='Guess Quote Commands!', color=0x702eb2)
@@ -47,14 +64,23 @@ def DisplayIncorrect():
     embed=discord.Embed(title="Guess the Quote!", description="Incorrect, ya got the wrong person!", color=0x702eb2)
     return embed
 
-# The different playable games
-gameStates = {
-    'guessGame': {
-        'ans': None,
-        'origQuote': None,
-        'namelessQuote': None,
-    }
-}
+async def DisplayLeaderboard(clientUser):
+    embed=discord.Embed(title="Leaderboard!", color=0x702eb2)
+    curLeaderboard = leaderboards['guessGame']
+    if curLeaderboard['userIdToPoints'].get(clientUser, None) != None:
+        theirRank = [cliId for cliId, _ in curLeaderboard['leaderboard']].index(clientUser) + 1
+        embed.add_field(name="Your Rank!",value=theirRank, inline= False)
+        embed.add_field(name="Your Points!",value=curLeaderboard['leaderboard'][theirRank - 1][1], inline = False)
+
+    if len(curLeaderboard['leaderboard']) != 0:
+        counter = 1
+        for leader, value in curLeaderboard['leaderboard'][:10]:
+            leaderName = await client.fetch_user(leader)
+            embed.add_field(name='{}. {}'.format(counter,leaderName), value=value, inline = False)
+            counter += 1
+    return embed
+
+
 
 def has_match(lstOne, lstTwo):
     seen = {}
@@ -67,7 +93,7 @@ def has_match(lstOne, lstTwo):
 
 #Game one
 
-def parseGameOne(message, ans, origQuote, namelessQuote):
+def parseGameOne(message, clientUser, ans, origQuote, namelessQuote):
     global currentGame
     name = None 
     messageList = message.split(' ')
@@ -87,6 +113,13 @@ def parseGameOne(message, ans, origQuote, namelessQuote):
         return DisplayGiveup(origQuote = origQuote)
     elif ans.lower() in message.lower() or (name_alias.get(name, None) != None and has_match(name_alias[name], name_alias[ans.lower()])):
         #Winner!
+        curLeaderboard = leaderboards['guessGame']
+        curLeaderboard['userIdToPoints'][clientUser] = curLeaderboard.get(clientUser, 0) + 1
+        rankings = list(curLeaderboard['userIdToPoints'].items())
+        rankings.sort(key=lambda tup: tup[1], reverse=True)
+        curLeaderboard['leaderboard'] = rankings
+
+        #Rest state
         currentGame = 0
         resetGameOne()
         return DisplayCorrect(origQuote = origQuote)
@@ -133,6 +166,7 @@ async def on_message(message):
     if message.author == client.user:
         return
 
+    clientUser = message.author.id
     messageContent = (message.content).lower()
 
     if len(messageContent) > 0 and messageContent[0] == prefix:
@@ -143,10 +177,13 @@ async def on_message(message):
         if messageContent == 'help':
             response = DisplayHelp()
         
+        elif messageContent in ['leaderboard', 'lb']:
+            response = await DisplayLeaderboard(clientUser)
+        
             # Prevents starting a new game if a game is on progress
         elif currentGame != 0: 
             key, curGameParser = parseGameFunc[currentGame]
-            response=curGameParser(messageContent,**gameStates[key])
+            response= curGameParser(messageContent,clientUser, **gameStates[key])
         else:
             #Start the game
             if (messageContent in ['guessquote','gq']):
@@ -158,7 +195,7 @@ async def on_message(message):
                     'namelessQuote': quoteText
                 }
                 response = DisplayGuessGame(**gameStates['guessGame'])
-            elif (messageContent in ['giveup', 'quote']):
+            elif (messageContent in ['giveup', 'quote','guess']):
                 response = DisplayNoGame()
 
         if response != None:
