@@ -151,6 +151,7 @@ async def parseGameOne(messageObj, message, clientUser):
 
     ans = gameState['ans']
     guesses = gameState['guesses']
+    namelessQuote = gameState['namelessQuote']
     
     name = None 
     messageList = message.split(' ')
@@ -159,7 +160,9 @@ async def parseGameOne(messageObj, message, clientUser):
     #check if they try to initiate here
     if message in ['gq','guessquote']:
         #Trying to be sneaky
-        return discord.Embed(title='Oh no!', description='A game is already in progress! Use -guess to guess or -giveup to quit the game. Quote: {namelessQuote}', color=0x702eb2)
+        embed =  discord.Embed(title='Oh no!', description=f'A game is already in progress! Use -guess to guess or -giveup to quit the game', color=0x702eb2)
+        embed.add_field(name='Quote',value=f'{namelessQuote}', inline= False)
+        return embed
     elif message in ['quote']:
         #Repeat Quote
         return DisplayGuessGame()
