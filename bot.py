@@ -104,7 +104,7 @@ def DisplayKeepGuessing():
     guesses = gameState['guesses']
     embed= discord.Embed(title=f'Keep guessing!', color=0x702eb2)
 
-    embed.add_field(name=f"You need {WRONG_ANSWERS_NEEDED - guesses} more to unlock this command", value="‎")
+    embed.add_field(name=f"You need {WRONG_ANSWERS_NEEDED - guesses} more guesses to unlock this command", value="‎")
     return embed
 
 
