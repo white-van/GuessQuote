@@ -3,3 +3,6 @@ testFile.txt
 test.py
 quotes.py
 __pycache__
+**/bin/**
+**/lib/**
+*.cfg
