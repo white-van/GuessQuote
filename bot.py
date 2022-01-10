@@ -180,7 +180,7 @@ async def parseGameOne(messageObj, message, clientUser):
             return DisplayKeepGuessing()
     elif ans.lower() in message.lower() or (name_alias.get(name, None) != None and has_match(name_alias[name], name_alias[ans.lower()])):
         #Winner!
-        leaderboard['userIdToPoints'][clientUser] = leaderboard.get(clientUser, 0) + 1
+        leaderboard['userIdToPoints'][clientUser] = leaderboard['userIdToPoints'].get(clientUser, 0) + 1
         rankings = list(leaderboard['userIdToPoints'].items())
         rankings.sort(key=lambda tup: tup[1], reverse=True)
         leaderboard['leaderboard'] = rankings
