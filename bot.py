@@ -4,6 +4,7 @@ import discord
 import random
 import re
 from dotenv import load_dotenv
+import keep_alive
 load_dotenv()
 
 from quotes import name_alias, quotes, id_to_name
@@ -169,8 +170,9 @@ async def parseGameOne(messageObj, message, clientUser):
     elif message in ['giveup']:
         #Gave up
         currentGame = 0
+        embed = DisplayGiveup()
         resetGameOne()
-        return DisplayGiveup()
+        return embed
     elif message in ['hint']:
         if guesses >= WRONG_ANSWERS_NEEDED:
             return DisplayHint()
@@ -276,4 +278,5 @@ async def on_message(message):
         if response != None:
             await message.reply(embed = response, mention_author = False)
 
+keep_alive.keep_alive()
 client.run(TOKEN)
