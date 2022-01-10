@@ -1,7 +1,5 @@
 from old_quotes import quotes
 
-
-
 IdToName = {}
 
 allQuotes = []
@@ -29,8 +27,12 @@ for quote in quotes:
       isClean = False
       break
 
-  if nick == '' or text == '':
+  if nick.strip() == '' or text.strip() == '':
     isClean = False
+
+  if nick.isdigit():
+    isClean = False
+
 
   if isClean:
     newSet = IdToName.get(userId, set())
@@ -45,11 +47,9 @@ counter = 1
 name_alias = {}
 for aliases in IdToName.values():
   for alias in aliases:
-    if (name_alias.get(alias, None) != None):
-      print('found dup:', alias, name_alias[alias])
-    
     name_alias[alias] = name_alias.get(alias, []) + [counter]
   counter += 1
 
+#print(IdToName)
 #print(allQuotes)
 #print(name_alias)
